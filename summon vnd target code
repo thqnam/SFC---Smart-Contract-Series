@@ -1,0 +1,96 @@
+import { getOrCreateAssociatedTokenAccount, getAccount, getMint } from "@solana/spl-token";
+let mintString = "4TndGJA5DeL6xZgdPLK3VETy6MVVuZgUWEdPk4KUMNCQ";
+let mint = new anchor.web3.PublicKey(mintString);
+const [vaultDataPda, bump1] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("vault")],
+  pg.program.programId
+);
+const [donatorDataPda, bump2] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("client","utf8"), pg.wallet.publicKey.toBuffer()],
+  pg.program.programId
+);
+let targetKeyString = "3AbLBHMDojuSUzj16tHRPovFs7AiX11fJFeJJFTqPkUE";
+let targetKey = new anchor.web3.PublicKey(targetKeyString);
+const [playerDataPda, bump4] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("client","utf8"), targetKey.toBuffer()],
+  pg.program.programId
+);
+const [targetDataPda, bump5] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("target","utf8"), pg.wallet.publicKey.toBuffer()],
+  pg.program.programId
+);
+let txHash = await pg.program.methods
+    .lockTarget(targetKey)
+    .accounts({
+      target: targetDataPda,
+      signer: pg.wallet.publicKey,
+      systemProgram: web3.SystemProgram.programId,
+    })
+    .rpc();
+console.log(`Use 'solana confirm -v ${txHash}' to see the logs`);
+await pg.connection.confirmTransaction(txHash);
+let targetDataAccount = await pg.program.account.userTarget.fetch(targetDataPda);
+console.log(
+  "You targeting to Pubkey: " +
+    targetDataAccount.assetTarget +
+    " after your command."
+);
+const mintAdd = await getMint(
+  pg.connection,
+  mint
+);
+const tokenAccount = await getOrCreateAssociatedTokenAccount(
+  pg.connection,
+  pg.wallet.keypair,
+  mint,
+  pg.wallet.publicKey
+)
+console.log(tokenAccount.address.toBase58());
+let decimal = 1;
+for (let i = 0 ; i < mintAdd.decimals ; i++){
+    decimal *= 10;
+};
+const tokenAccountInfoBefore = await getAccount(
+  pg.connection,
+  tokenAccount.address
+);
+console.log(`Before summon your partner have ${new Number(tokenAccountInfoBefore.amount).valueOf() / decimal} SFC - VND Stable Coin in their wallet`);
+try {
+  let gameDataAccount = await pg.program.account.userInfor.fetch(donatorDataPda);
+  console.log(
+    "Before summon you have " +
+      gameDataAccount.assetAccount +
+      " VND in your account."
+  );
+  let amount: number = 10000;
+  const amountBN = new BN(amount);
+  let txHash = await pg.program.methods
+    .summonAsset(amountBN, true)
+    .accounts({
+      target: targetDataPda,
+      client: playerDataPda,
+      mint: mintAdd.address,
+      tk: tokenAccount.address,
+      donator: donatorDataPda,
+      vault: vaultDataPda,
+      signer: pg.wallet.publicKey,
+      token: new anchor.web3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+    })
+    .rpc();
+  console.log(`Summon ${amount} VND from the vault`);
+  console.log(`Use 'solana confirm -v ${txHash}' to see the logs`);
+  await pg.connection.confirmTransaction(txHash);
+  gameDataAccount = await pg.program.account.userInfor.fetch(donatorDataPda);
+  console.log(
+    "After summon you have " +
+      gameDataAccount.assetAccount +
+      " VND in your account."
+  );
+} catch (e) {
+  console.log(`${e}`);
+}
+const tokenAccountInfoAfter = await getAccount(
+  pg.connection,
+  tokenAccount.address
+);
+console.log(`After summon your partner have ${new Number(tokenAccountInfoAfter.amount).valueOf() / decimal} SFC - VND Stable Coin in their wallet`);
