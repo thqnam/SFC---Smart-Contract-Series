@@ -1,0 +1,32 @@
+const [playerDataPda, bump1] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("client","utf8"), pg.wallet.publicKey.toBuffer()],
+  pg.program.programId
+);
+const [vaultDataPda, bump3] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("vault")],
+  pg.program.programId
+);
+let gameDataAccount;
+try {
+  gameDataAccount = await pg.program.account.userInfor.fetch(playerDataPda);
+  console.log(`Your user created.`);
+} catch (e) {
+  console.log(`Your user creating.`);
+  let txHash = await pg.program.methods
+    .initUser()
+    .accounts({
+      vault: vaultDataPda,
+      client: playerDataPda,
+      signer: pg.wallet.publicKey,
+      systemProgram: web3.SystemProgram.programId,
+    })
+    .rpc();
+  console.log(`Use 'solana confirm -v ${txHash}' to see the logs`);
+  await pg.connection.confirmTransaction(txHash);
+  gameDataAccount = await pg.program.account.userInfor.fetch(playerDataPda);
+}
+console.log(
+  "Your user currently have " +
+    gameDataAccount.assetAccount +
+    " VND in the on chain account."
+);
