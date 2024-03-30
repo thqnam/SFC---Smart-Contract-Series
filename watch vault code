@@ -1,0 +1,23 @@
+import { getMint } from "@solana/spl-token";
+let mintString = "4TndGJA5DeL6xZgdPLK3VETy6MVVuZgUWEdPk4KUMNCQ";
+let mint = new anchor.web3.PublicKey(mintString);
+const [playerDataPda, bump1] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("vault")],
+  pg.program.programId
+);
+console.log(`PDA is: ${playerDataPda}`);
+let gameDataAccount = await pg.program.account.userInfor.fetch(playerDataPda);
+console.log(
+  "The vault currently have " +
+    gameDataAccount.assetAccount +
+    " VND in the on chain account."
+);
+const vaultStableCoin = await getMint(
+  pg.connection,
+  mint
+)
+let decimal = 1;
+for (let i = 0 ; i < vaultStableCoin.decimals ; i++){
+    decimal *= 10;
+}
+console.log(`Total SFC - VND Stable Coin: ${new Number(vaultStableCoin.supply).valueOf() / decimal}`);
