@@ -1,0 +1,19 @@
+import { getAssociatedTokenAddress, closeAccount } from "@solana/spl-token";
+let mintString = "4TndGJA5DeL6xZgdPLK3VETy6MVVuZgUWEdPk4KUMNCQ";
+let mint = new anchor.web3.PublicKey(mintString);
+try {
+  const tokenAccount = await getAssociatedTokenAddress(
+    mint,
+    pg.wallet.publicKey,
+  )
+  const tokenAccountInfo = await closeAccount(
+    pg.connection,
+    pg.wallet.keypair,
+    tokenAccount,
+    pg.wallet.publicKey,
+    pg.wallet.keypair
+  )
+  console.log(`Your Token Acc is closed, proof ${tokenAccountInfo}`);
+} catch (e){
+  console.log(`You don't have Token Account for Mint ${mint.toBase58()}`)
+}
