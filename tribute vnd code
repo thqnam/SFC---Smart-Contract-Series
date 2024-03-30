@@ -1,0 +1,70 @@
+import { getOrCreateAssociatedTokenAccount, getAccount, getMint, } from "@solana/spl-token";
+let mintString = "4TndGJA5DeL6xZgdPLK3VETy6MVVuZgUWEdPk4KUMNCQ";
+let mint = new anchor.web3.PublicKey(mintString);
+const [vaultDataPda, bump1] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("vault")],
+  pg.program.programId
+);
+const [donatorDataPda, bump2] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("client","utf8"), pg.wallet.publicKey.toBuffer()],
+  pg.program.programId
+);
+const mintAdd = await getMint(
+  pg.connection,
+  mint
+);
+const tokenAccount = await getOrCreateAssociatedTokenAccount(
+  pg.connection,
+  pg.wallet.keypair,
+  mint,
+  pg.wallet.publicKey
+)
+console.log(tokenAccount.address.toBase58());
+let decimal = 1;
+for (let i = 0 ; i < mintAdd.decimals ; i++){
+    decimal *= 10;
+};
+const tokenAccountInfoBefore = await getAccount(
+  pg.connection,
+  tokenAccount.address
+);
+console.log(`Before tribute you have ${new Number(tokenAccountInfoBefore.amount).valueOf() / decimal} SFC - VND Stable Coin in your wallet`);
+try {
+  let gameDataAccount = await pg.program.account.userInfor.fetch(donatorDataPda);
+  console.log(
+    "Before tribute you have " +
+      gameDataAccount.assetAccount +
+      " VND in your account."
+  );
+  let amount: number = 10000;
+  const amountBN = new BN(amount);
+  const bumpBN = new BN(bump1);
+  let txHash = await pg.program.methods
+    .tributeAsset(amountBN, bumpBN)
+    .accounts({
+      mint: mintAdd.address,
+      tk: tokenAccount.address,
+      donator: donatorDataPda,
+      vault: vaultDataPda,
+      signer: pg.wallet.publicKey,
+      token: new anchor.web3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+      authority: vaultDataPda
+    })
+    .rpc();
+  console.log(`Tribute ${amount} VND to The Vault`);
+  console.log(`Use 'solana confirm -v ${txHash}' to see the logs`);
+  await pg.connection.confirmTransaction(txHash);
+  gameDataAccount = await pg.program.account.userInfor.fetch(donatorDataPda);
+  console.log(
+    "After tribute you have " +
+      gameDataAccount.assetAccount +
+      " VND in your account."
+  );
+} catch (e) {
+  console.log(`${e}`);
+}
+const tokenAccountInfoAfter = await getAccount(
+  pg.connection,
+  tokenAccount.address
+);
+console.log(`After tribute you have ${new Number(tokenAccountInfoAfter.amount).valueOf() / decimal} SFC - VND Stable Coin in your wallet`);
