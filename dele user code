@@ -1,0 +1,20 @@
+let targetKeyString = "HSaxGp1yjsBRcLLzxMQvdR3QXoVixtvY94TcU2wAyCNC";
+let targetKey = new anchor.web3.PublicKey(targetKeyString);
+const [playerDataPda, bump1] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("client","utf8"), pg.wallet.publicKey.toBuffer()],
+  pg.program.programId
+);
+try {
+  let txHash = await pg.program.methods
+    .clearUser()
+    .accounts({
+        client: playerDataPda,
+        signer: pg.wallet.publicKey,
+      })
+    .rpc();
+  await pg.connection.confirmTransaction(txHash);
+  console.log(`Your user has been deleted`);
+  console.log(`Use 'solana confirm -v ${txHash}' to see the logs`);
+} catch (e) {
+  console.log(`${e}`);
+}
