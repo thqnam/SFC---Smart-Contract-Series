@@ -1,0 +1,20 @@
+import { getAssociatedTokenAddress, createAssociatedTokenAccount } from "@solana/spl-token";
+let mintString = "4TndGJA5DeL6xZgdPLK3VETy6MVVuZgUWEdPk4KUMNCQ";
+let mint = new anchor.web3.PublicKey(mintString);
+let tokenAccount;
+try {
+  tokenAccount = await getAssociatedTokenAddress(
+    mint,
+    pg.wallet.publicKey,
+  )
+  console.log(`You having a Token Account for Mint ${mint.toBase58()}`);
+} catch (e){
+  tokenAccount = await createAssociatedTokenAccount(
+    pg.connection,
+    pg.wallet.keypair,
+    mint,
+    pg.wallet.publicKey
+  )
+  console.log(`Your Token Account for Mint ${mint.toBase58()} has been created`);
+}
+console.log(`It's address is ${tokenAccount}`)
